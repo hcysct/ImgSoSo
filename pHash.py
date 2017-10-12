@@ -7,10 +7,15 @@ import os
 def hamming_dist(str1, str2):
     return sum([ch1 != ch2 for ch1, ch2 in zip(str1, str2)])
 
+
 def image_phash(filepath):
     img = Image.open(filepath)
-    hash_value = imagehash.phash(img)
+    img = img.convert('L')
+    if img.size[0] >= 8 and img.size[1] >= 8:
+        img = img.resize((8, 8), Image.ANTIALIAS)
+    hash_value = imagehash.phash(img, hash_size=16)
     return str(hash_value)
+
 
 def search_similar_images(src_img_path, dir_path):
     result = []
@@ -32,15 +37,16 @@ def search_similar_images(src_img_path, dir_path):
             dest_phash_value = image_phash(img_path)
             hash_data[img_path] = dest_phash_value
         img_dist = hamming_dist(src_phash_value, dest_phash_value)
-        if img_dist <= 5:
+        if img_dist <= 40:
             result.append([img_path, img_dist])
     with open(dir_path + '/phash_data.json', 'w') as f:
         json.dump(hash_data, f)
     result = sorted(result, key=lambda x: x[1])
     return result
 
-def generate_images_html(src_img_path,similar_images):
-    template='''
+
+def generate_images_html(src_img_path, similar_images):
+    template = '''
     <html>
         <title>图片搜索结果</title>
         <body>
@@ -55,15 +61,18 @@ def generate_images_html(src_img_path,similar_images):
         </body>
     </html>
     '''
-    src_img='<img src="{}" alt=""> '.format(src_img_path)
-    search_result=''
+    src_img = '<img src="{}" alt=""> '.format(src_img_path)
+    search_result = ''
     for item in similar_images:
-        search_result+='<img src="{}" alt="">\n'.format(item[0])
-    html=template.format(src_img,search_result)
-    with open('result.html','w',encoding='utf-8') as f:
+        search_result += '<img src="{}" alt="">\n'.format(item[0])
+    html = template.format(src_img, search_result)
+    with open('result.html', 'w', encoding='utf-8') as f:
         f.write(html)
 
+
 if __name__ == '__main__':
+    img_path = input("path:")
     result = search_similar_images(
-        'images/3e5252c290ae2429d7ab9941649727e8.png', 'images')
-    generate_images_html('images/3e5252c290ae2429d7ab9941649727e8.png',result)
+        'images/' + img_path, 'images')
+    print(result)
+    generate_images_html('images/' + img_path, result)
